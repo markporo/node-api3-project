@@ -1,44 +1,113 @@
-const express = require('express');
+const router = require('express').Router();
+const usersModel = require('./users-model')
+const postsModel = require('../posts/posts-model')
 
 // You will need `users-model.js` and `posts-model.js` both
 // The middleware functions also need to be required
+const { validateUserId, validateUser, validatePost } = require('../middleware/middleware')
 
-const router = express.Router();
 
 router.get('/', (req, res) => {
   // RETURN AN ARRAY WITH ALL THE USERS
+  usersModel
+    .get()
+    .then((users) => {
+      // const justNames = users.map(eachUser => {
+      //   return { "name": eachUser.name }
+      // })
+      //console.log(justNames, "just Names")
+      console.log(users);
+      return res.status(200).json(users)
+
+    })
+    .catch(() => {
+      res.status(500).json({ message: "server error" })
+    })
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', validateUserId, async (req, res) => {
   // RETURN THE USER OBJECT
   // this needs a middleware to verify user id
+  try {
+    const foundUser = await usersModel.getById(req.params.id)
+    res.status(200).json(foundUser)
+  } catch {
+    res.status(500).json({ message: "The post information could not be retrieved" })
+  }
 });
 
-router.post('/', (req, res) => {
+router.post('/', validateUser, (req, res) => {
   // RETURN THE NEWLY CREATED USER OBJECT
   // this needs a middleware to check that the request body is valid
+  console.log(req.body, "post - req.body")
+  usersModel
+    .insert(req.body)
+    .then((data) => {
+      res.status(201).json({ id: data.id, name: req.body.name });
+    })
+    .catch(() => {
+      res.status(500).json({ message: "There was an error while saving the user to the database" })
+    })
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', validateUserId, validateUser, async (req, res) => {
   // RETURN THE FRESHLY UPDATED USER OBJECT
   // this needs a middleware to verify user id
   // and another middleware to check that the request body is valid
+  let id = req.params.id
+  usersModel
+    .update(id, req.body)
+    .then((updated) => {
+      console.log(updated, "updated user")
+      usersModel.getById(id).then((resultById) => { res.status(200).json(resultById) })
+    })
+    .catch(() => {
+      res.status(500).json({ message: "The user could not be modified" })
+    })
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', validateUserId, async (req, res) => {
   // RETURN THE FRESHLY DELETED USER OBJECT
   // this needs a middleware to verify user id
+  const user = await usersModel.getById(req.params.id)
+  usersModel
+    .remove(req.params.id)
+    .then((result) => {
+      console.log(result, "number of users deleted")
+
+      res.status(200).json(user);
+    })
+    .catch(() => {
+      res.status(500).json({ message: "The user could not be deleted" })
+    })
 });
 
-router.get('/:id/posts', (req, res) => {
+router.get('/:id/posts', validateUserId, async (req, res) => {
   // RETURN THE ARRAY OF USER POSTS
   // this needs a middleware to verify user id
+  try {
+    const foundUsersPost = await usersModel.getUserPosts(req.params.id)
+    res.status(200).json(foundUsersPost)
+  } catch {
+    res.status(500).json({ message: "The post could not be retrieved" })
+  }
 });
 
-router.post('/:id/posts', (req, res) => {
+router.post('/:id/posts', validateUserId, validatePost, (req, res) => {
   // RETURN THE NEWLY CREATED USER POST
   // this needs a middleware to verify user id
   // and another middleware to check that the request body is valid
+  const post = req.body
+  postsModel
+    .insert(post)
+    .then((newPOst) => {
+      res.status(200).json(newPOst)
+    })
+    .catch(() => {
+      res.status(500).json({ message: "The created post could not be saved" })
+
+    })
 });
 
 // do not forget to export the router
+module.exports = router;
