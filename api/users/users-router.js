@@ -4,7 +4,7 @@ const postsModel = require('../posts/posts-model')
 
 // You will need `users-model.js` and `posts-model.js` both
 // The middleware functions also need to be required
-const customMiddleware = require('../middleware/middleware')
+const { validateUserId, validateUser, validatePost } = require('../middleware/middleware')
 
 
 router.get('/', (req, res) => {
@@ -12,15 +12,20 @@ router.get('/', (req, res) => {
   usersModel
     .get()
     .then((users) => {
-      const justNames = users.map(eachUser => {
-        return { "name": eachUser.name }
-      })
-      console.log(justNames, "just Names")
-      res.status(200).json(justNames)
+      // const justNames = users.map(eachUser => {
+      //   return { "name": eachUser.name }
+      // })
+      //console.log(justNames, "just Names")
+      console.log(users);
+      return res.status(200).json(users)
+
+    })
+    .catch(() => {
+      res.status(500).json({ message: "server error" })
     })
 });
 
-router.get('/:id', customMiddleware.validateUserId, async (req, res) => {
+router.get('/:id', validateUserId, async (req, res) => {
   // RETURN THE USER OBJECT
   // this needs a middleware to verify user id
   try {
@@ -31,9 +36,10 @@ router.get('/:id', customMiddleware.validateUserId, async (req, res) => {
   }
 });
 
-router.post('/', customMiddleware.validateUser, (req, res) => {
+router.post('/', validateUser, (req, res) => {
   // RETURN THE NEWLY CREATED USER OBJECT
   // this needs a middleware to check that the request body is valid
+  console.log(req.body, "post - req.body")
   usersModel
     .insert(req.body)
     .then((data) => {
@@ -44,7 +50,7 @@ router.post('/', customMiddleware.validateUser, (req, res) => {
     })
 });
 
-router.put('/:id', customMiddleware.validateUserId, customMiddleware.validateUser, async (req, res) => {
+router.put('/:id', validateUserId, validateUser, async (req, res) => {
   // RETURN THE FRESHLY UPDATED USER OBJECT
   // this needs a middleware to verify user id
   // and another middleware to check that the request body is valid
@@ -60,20 +66,29 @@ router.put('/:id', customMiddleware.validateUserId, customMiddleware.validateUse
     })
 });
 
-router.delete('/:id', customMiddleware.validateUserId, async (req, res) => {
+router.delete('/:id', validateUserId, (req, res) => {
   // RETURN THE FRESHLY DELETED USER OBJECT
   // this needs a middleware to verify user id
   let id = req.params.id
-  try {
-    await usersModel.remove(id) // don't forget the await keyword
-    res.status(200).json(usersModel.getById(id))
+  // try {
+  //   await usersModel.remove(id) // don't forget the await keyword
+  //   res.status(200).json(usersModel.getById(id))
 
-  } catch {
-    res.status(500).json({ message: "The user could not be deleted" })
-  }
+  // } catch {
+  //   res.status(500).json({ message: "The user could not be deleted" })
+  // }
+  usersModel
+    .remove(id)
+    .then((result) => {
+      console.log(result, "number of users deleted")
+      res.status(200).json(usersModel.getById(id))
+    })
+    .catch(() => {
+      res.status(500).json({ message: "The user could not be deleted" })
+    })
 });
 
-router.get('/:id/posts', customMiddleware.validateUserId, async (req, res) => {
+router.get('/:id/posts', validateUserId, async (req, res) => {
   // RETURN THE ARRAY OF USER POSTS
   // this needs a middleware to verify user id
   try {
@@ -84,7 +99,7 @@ router.get('/:id/posts', customMiddleware.validateUserId, async (req, res) => {
   }
 });
 
-router.post('/:id/posts', customMiddleware.validateUserId, customMiddleware.validatePost, (req, res) => {
+router.post('/:id/posts', validateUserId, validatePost, (req, res) => {
   // RETURN THE NEWLY CREATED USER POST
   // this needs a middleware to verify user id
   // and another middleware to check that the request body is valid
