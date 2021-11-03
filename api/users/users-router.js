@@ -66,22 +66,16 @@ router.put('/:id', validateUserId, validateUser, async (req, res) => {
     })
 });
 
-router.delete('/:id', validateUserId, (req, res) => {
+router.delete('/:id', validateUserId, async (req, res) => {
   // RETURN THE FRESHLY DELETED USER OBJECT
   // this needs a middleware to verify user id
-  let id = req.params.id
-  // try {
-  //   await usersModel.remove(id) // don't forget the await keyword
-  //   res.status(200).json(usersModel.getById(id))
-
-  // } catch {
-  //   res.status(500).json({ message: "The user could not be deleted" })
-  // }
+  const user = await usersModel.getById(req.params.id)
   usersModel
-    .remove(id)
+    .remove(req.params.id)
     .then((result) => {
       console.log(result, "number of users deleted")
-      res.status(200).json(usersModel.getById(id))
+
+      res.status(200).json(user);
     })
     .catch(() => {
       res.status(500).json({ message: "The user could not be deleted" })
@@ -103,10 +97,11 @@ router.post('/:id/posts', validateUserId, validatePost, (req, res) => {
   // RETURN THE NEWLY CREATED USER POST
   // this needs a middleware to verify user id
   // and another middleware to check that the request body is valid
+  const post = req.body
   postsModel
-    .insert(req.params.id)
-    .then((data) => {
-      res.status(200).json(data)
+    .insert(post)
+    .then((newPOst) => {
+      res.status(200).json(newPOst)
     })
     .catch(() => {
       res.status(500).json({ message: "The created post could not be saved" })
